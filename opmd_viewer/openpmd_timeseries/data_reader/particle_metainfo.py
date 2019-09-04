@@ -12,7 +12,7 @@ License: 3-Clause-BSD-LBNL
 
 import numpy as np
 from .utilities import get_data, get_bpath, join_infile_path
-
+from scipy import constants
 
 class ParticleMetaInformation(object):
     """
@@ -39,7 +39,7 @@ class ParticleMetaInformation(object):
         The input arguments correspond to their openPMD standard definition
         """
         # access file
-        base_path = get_bpath(f)
+        base_path = get_bpath(file_handle)
         particles_path = file_handle.attrs['particlesPath'].decode()
         species_grp = file_handle[
             join_infile_path(base_path, particles_path, species,)]
@@ -51,15 +51,17 @@ class ParticleMetaInformation(object):
         charge *= species_grp['charge'].attrs['unitSI']
         self.charge = charge
         # units return by according to '.particle_reader.read_species_data'
-        self.quantity_unit = {'x' : 'um',
-                                 'y' : 'um',
-                                 'z' : 'um',
-                                 'ux': 'p/mc',
-                                 'uy': 'p/mc',
-                                 'uz': 'p/mc'}
-        self.unitSI = {'x' : np.float64(1e-6),
-                       'y' : np.float64(1e-6),
-                       'z' : np.float64(1e-6),
-                       'ux': np.float64(mass*charge),
-                       'uy': np.float64(mass*charge),
-                       'uz': np.float64(mass*charge)}
+        quantity_unit = {'x' : 'um',
+                         'y' : 'um',
+                         'z' : 'um',
+                         'ux': 'p/mc',
+                         'uy': 'p/mc',
+                         'uz': 'p/mc'}
+        self.quantity_unit = dict((k, quantity_unit[k]) for k in var_list)
+        unitSI = {'x': np.float64(1e-6),
+                  'y': np.float64(1e-6),
+                  'z': np.float64(1e-6),
+                  'ux': np.float64(mass*constants.c),
+                  'uy': np.float64(mass*constants.c),
+                  'uz': np.float64(mass*constants.c)}
+        self.unitSI = dict((k, unitSI[k]) for k in var_list)
