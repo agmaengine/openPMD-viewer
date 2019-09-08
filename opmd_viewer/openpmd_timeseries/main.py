@@ -14,6 +14,7 @@ from .utilities import list_h5_files, apply_selection, fit_bins_to_grid, \
                         combine_cylindrical_components
 from .plotter import Plotter
 from .particle_tracker import ParticleTracker
+from .data_reader.particle_metainfo import ParticleMetaInformation
 from .data_reader.params_reader import read_openPMD_params
 from .data_reader.particle_reader import read_species_data
 from .data_reader.field_reader import read_field_1d, read_field_2d, \
@@ -36,6 +37,47 @@ class OpenPMDTimeSeries(InteractiveViewer):
     - get_field
     - get_particle
     - slider
+
+    attributes
+    ----------
+
+    h5_files:
+    list of loaded h5 file's full paths
+
+    iterations: int (numpy array)
+    collection of output iteration as numpy array
+
+    t: double (numpy array)
+    collection of times in SI unit at each iterations as numpy array
+
+    extensions:
+
+    avail_fields: str (list)
+    list of available field output
+
+    fields_metadata: dict
+    dict of field metadata
+
+    avail_geom: set
+    set of available geometry
+
+    avail_species: str (list)
+    list of available species
+
+    avail_record_components: dict
+    dict of list of each species available record components
+
+    current_iteration: int
+    current iteration
+
+    current_t: double
+    current time
+
+    tmin: double
+    minimum time of time series
+
+    tmax: double
+    maximum time of time series
     """
 
     def __init__(self, path_to_dir, check_all_files=True):
@@ -222,6 +264,7 @@ class OpenPMDTimeSeries(InteractiveViewer):
             valid_var_list = False
         else:
             for quantity in var_list:
+                # they should accept only non-empty dataset
                 if quantity not in self.avail_record_components[species]:
                     valid_var_list = False
         if not valid_var_list:
@@ -263,6 +306,8 @@ class OpenPMDTimeSeries(InteractiveViewer):
         file_name = self.h5_files[self._current_i]
         file_handle = h5.File(file_name, 'r')
 
+        # Create particle metadata info
+        info = ParticleMetaInformation(file_handle, species, var_list)
         # Extract the list of particle quantities
         data_list = []
         for quantity in var_list:
@@ -330,14 +375,14 @@ class OpenPMDTimeSeries(InteractiveViewer):
             # - In the case of only one quantity
             if len(data_list) == 1:
                 # Do the plotting
-                self.plotter.hist1d(data_list[0], w, var_list[0], species,
+                self.plotter.hist1d(data_list[0], w, var_list[0], species, info,
                         self._current_i, hist_bins[0], hist_range,
                         deposition=histogram_deposition, **kw)
             # - In the case of two quantities
             elif len(data_list) == 2:
                 # Do the plotting
                 self.plotter.hist2d(data_list[0], data_list[1], w,
-                    var_list[0], var_list[1], species,
+                    var_list[0], var_list[1], species, info,
                     self._current_i, hist_bins, hist_range,
                     deposition=histogram_deposition, **kw)
         # Close the file
@@ -345,7 +390,7 @@ class OpenPMDTimeSeries(InteractiveViewer):
 
         # Output
         if output:
-            return(data_list)
+            return(data_list, info)
 
     def get_field(self, field=None, coord=None, t=None, iteration=None,
                   m='all', theta=0., slicing=0., slicing_dir='y',
@@ -418,7 +463,7 @@ class OpenPMDTimeSeries(InteractiveViewer):
         Returns
         -------
         A tuple with
-           F : a 2darray containing the required field
+           F : a 2darray containing the required field SI unit
            info : a FieldMetaInformation object
            (see the corresponding docstring)
         """
