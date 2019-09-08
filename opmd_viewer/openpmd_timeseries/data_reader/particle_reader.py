@@ -34,6 +34,11 @@ def read_species_data(file_handle, species, record_comp, extensions):
 
     extensions: list of strings
         The extensions that the current OpenPMDTimeSeries complies with
+
+    returns
+    -------
+    data:
+    data in normalized unit otherwise histogram is doomed
     """
     # Translate the record component to the openPMD format
     dict_record_comp = {'x': 'position/x',
