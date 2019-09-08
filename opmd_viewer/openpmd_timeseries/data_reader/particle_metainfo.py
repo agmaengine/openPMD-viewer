@@ -51,17 +51,31 @@ class ParticleMetaInformation(object):
         charge *= species_grp['charge'].attrs['unitSI']
         self.charge = charge
         # units return by according to '.particle_reader.read_species_data'
-        quantity_unit = {'x' : 'um',
-                         'y' : 'um',
-                         'z' : 'um',
+        quantity_unit = {'x' : '\mu m',
+                         'y' : '\mu m',
+                         'z' : '\mu m',
                          'ux': 'p/mc',
                          'uy': 'p/mc',
                          'uz': 'p/mc'}
-        self.quantity_unit = dict((k, quantity_unit[k]) for k in var_list)
+        # create unit dict
+        self.quantity_unit = dict()
+        # check if var_list is in quantity unit dict
+        for q in var_list:
+            if q in quantity_unit:
+                self.quantity_unit.update({q:quantity_unit[q]})
+            else:
+                self.quantity_unit.update({q:''})
+        # self.quantity_unit = dict((k, quantity_unit[k]) for k in var_list)
         unitSI = {'x': np.float64(1e-6),
                   'y': np.float64(1e-6),
                   'z': np.float64(1e-6),
                   'ux': np.float64(mass*constants.c),
                   'uy': np.float64(mass*constants.c),
                   'uz': np.float64(mass*constants.c)}
-        self.unitSI = dict((k, unitSI[k]) for k in var_list)
+        self.unitSI = dict()
+        for q in var_list:
+            if q in unitSI:
+                self.unitSI.update({q:unitSI[q]})
+            else:
+                self.unitSI.update({q:np.float64(1)})
+        # self.unitSI = dict((k, unitSI[k]) for k in var_list)
