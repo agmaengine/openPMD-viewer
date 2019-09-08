@@ -21,6 +21,8 @@ try:
     cython_function_available = True
 except ImportError:
     cython_function_available = False
+from .data_reader.particle_metainfo import ParticleMetaInformation
+
 
 
 class Plotter(object):
@@ -49,8 +51,9 @@ class Plotter(object):
         # (Useful when labeling the figures)
         self.t = t
         self.iterations = iterations
+        # TODO add unit_dict
 
-    def hist1d(self, q1, w, quantity1, species, current_i, nbins, hist_range,
+    def hist1d(self, q1, w, quantity1, species, info, current_i, nbins, hist_range,
                cmap='Blues', vmin=None, vmax=None, deposition='cic', **kw):
         """
         Plot a 1D histogram of the particle quantity q1
@@ -93,6 +96,11 @@ class Plotter(object):
         # Check if matplotlib is available
         check_matplotlib()
 
+        # # automatic detect ranges
+        # hist_range = [[q1.min(), q1.max()], [None, None]]
+        #
+        # # use range from cell dimension
+
         # Find the iteration and time
         iteration = self.iterations[current_i]
         time_fs = 1.e15 * self.t[current_i]
@@ -118,11 +126,15 @@ class Plotter(object):
         plt.bar( bin_coords, binned_data, width=bin_size, **kw )
         plt.xlim( hist_range[0] )
         plt.ylim( hist_range[1] )
-        plt.xlabel(quantity1, fontsize=self.fontsize)
+        if quantity1 in info.quantity_unit:
+            plt.xlabel("$%s \; (%s)$" % (quantity1, info.quantity_unit[quantity1]), fontsize=self.fontsize)
+        else:
+            plt.xlabel(quantity1, fontsize=self.fontsize)
+        plt.ylabel("particle counts")
         plt.title("%s:   t =  %.0f fs    (iteration %d)"
                   % (species, time_fs, iteration), fontsize=self.fontsize)
 
-    def hist2d(self, q1, q2, w, quantity1, quantity2, species, current_i,
+    def hist2d(self, q1, q2, w, quantity1, quantity2, species, info, current_i,
                 nbins, hist_range, cmap='Blues', vmin=None, vmax=None,
                 deposition='cic', **kw):
         """
@@ -144,6 +156,9 @@ class Plotter(object):
 
         species: string
             The name of the species from which the data is taken
+
+        info: dict
+            The particle metadata
 
         current_i: int
             The index of this iteration, within the iterations list
@@ -192,9 +207,10 @@ class Plotter(object):
         plt.imshow( binned_data.T, extent=hist_range[0] + hist_range[1],
              origin='lower', interpolation='nearest', aspect='auto',
              cmap=cmap, vmin=vmin, vmax=vmax, **kw )
-        plt.colorbar()
-        plt.xlabel(quantity1, fontsize=self.fontsize)
-        plt.ylabel(quantity2, fontsize=self.fontsize)
+        cb = plt.colorbar()
+        cb.set_label('particle count')
+        plt.xlabel("$%s\;(%s)$" % (quantity1, info.quantity_unit[quantity1]), fontsize=self.fontsize)
+        plt.ylabel("$%s\;(%s)$" % (quantity2, info.quantity_unit[quantity2]), fontsize=self.fontsize)
         plt.title("%s:   t =  %.1f fs   (iteration %d)"
                   % (species, time_fs, iteration), fontsize=self.fontsize)
 
@@ -234,6 +250,7 @@ class Plotter(object):
 
         # Add the name of the axes
         plt.xlabel('$%s \;(\mu m)$' % info.axes[0], fontsize=self.fontsize)
+        plt.ylabel(field_strength_label(field_label))
         # Get the x axis in microns
         xaxis = 1.e6 * getattr( info, info.axes[0] )
         # Plot the data
@@ -312,8 +329,8 @@ class Plotter(object):
         # Plot the data
         plt.imshow(F, extent=1.e6 * info.imshow_extent, origin='lower',
                    interpolation='nearest', aspect='auto', **kw)
-        plt.colorbar()
-
+        cb = plt.colorbar()
+        cb.set_label(field_strength_label(field_label))
         # Get the limits of the plot
         # - Along the first dimension
         if (plot_range[0][0] is not None) and (plot_range[0][1] is not None):
@@ -345,3 +362,10 @@ def check_matplotlib():
         "backend. \n(This typically obtained when typing `%matplotlib`.)\n"
         "With recent version of Jupyter, the plots might not appear.\nIn this "
         "case, switch to `%matplotlib notebook` and restart the notebook.")
+
+
+def field_strength_label(field_label):
+    if 'E' in field_label:
+        return "$V/m$"
+    elif 'B' in field_label:
+        return "$T$"
